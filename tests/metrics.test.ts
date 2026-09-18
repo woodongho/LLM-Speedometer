@@ -155,3 +155,86 @@ describe('computeMetrics - error reporting', () => {
     expect(r.errors.some((e) => /estimate/i.test(e))).toBe(true);
   });
 });
+
+
+describe('computeMetrics - usage (endpoint sends usage)', () => {
+  it('reflects usage prompt/completion/total exactly', () => {
+    const r = computeMetrics({
+      tokens: toks([0, 10, 20], ['a', 'b', 'c']),
+      usage: { prompt_tokens: 42, completion_tokens: 17, total_tokens: 59 },
+    });
+    expect(r.promptTokens).toBe(42);
+    expect(r.completionTokens).toBe(17);
+    expect(r.totalTokens).toBe(59);
+    expect(r.tokenCountSource).toBe('usage');
+  });
+
+  it('uses explicit total_tokens even if it differs from the sum', () => {
+    const r = computeMetrics({
+      tokens: toks([0, 10], ['a', 'b']),
+      usage: { prompt_tokens: 100, completion_tokens: 5, total_tokens: 108 },
+    });
+    expect(r.totalTokens).toBe(108);
+    expect(r.promptTokens).toBe(100);
+    expect(r.completionTokens).toBe(5);
+  });
+
+  it('defaults total to prompt+completion when total omitted', () => {
+    const r = computeMetrics({
+      tokens: toks([0, 10], ['a', 'b']),
+      usage: { prompt_tokens: 8, completion_tokens: 4 },
+    });
+    expect(r.totalTokens).toBe(12);
+  });
+
+  it('handles completion-only usage (prompt defaults to 0)', () => {
+    const r = computeMetrics({
+      tokens: toks([0, 10], ['a', 'b']),
+      usage: { completion_tokens: 30 },
+    });
+    expect(r.promptTokens).toBe(0);
+    expect(r.completionTokens).toBe(30);
+    expect(r.totalTokens).toBe(30);
+  });
+
+  it('prefers usage over ollama metadata when both present', () => {
+    const r = computeMetrics({
+      tokens: toks([0, 10], ['a', 'b']),
+      usage: { prompt_tokens: 11, completion_tokens: 22, total_tokens: 33 },
+      ollama: { prompt_eval_count: 999, eval_count: 999 },
+    });
+    expect(r.promptTokens).toBe(11);
+    expect(r.completionTokens).toBe(22);
+    expect(r.tokenCountSource).toBe('usage');
+  });
+
+  it('falls back to ollama counts when no OpenAI usage', () => {
+    const r = computeMetrics({
+      tokens: toks([0, 10], ['a', 'b']),
+      ollama: { prompt_eval_count: 30, eval_count: 12 },
+    });
+    expect(r.promptTokens).toBe(30);
+    expect(r.completionTokens).toBe(12);
+    expect(r.tokenCountSource).toBe('usage');
+    expect(r.engine).toBe('ollama');
+  });
+
+  it('never uses estimate when usage is present', () => {
+    const r = computeMetrics({
+      tokens: toks([0, 10, 20, 30], ['a', 'b', 'c', 'd']),
+      usage: { prompt_tokens: 3, completion_tokens: 9 },
+    });
+    // 4 content tokens exist but usage says 9 -> usage wins
+    expect(r.completionTokens).toBe(9);
+    expect(r.tokenCountSource).toBe('usage');
+  });
+
+  it('clamps negative usage counts to zero', () => {
+    const r = computeMetrics({
+      tokens: toks([0, 10], ['a', 'b']),
+      usage: { prompt_tokens: -5, completion_tokens: 4 },
+    });
+    expect(r.promptTokens).toBe(0);
+    expect(r.completionTokens).toBe(4);
+  });
+});

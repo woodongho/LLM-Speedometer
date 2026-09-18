@@ -156,3 +156,53 @@ describe('integration: full stream reassembly', () => {
     expect(assembled).toBe('Hello, world');
   });
 });
+
+describe('parseSseLines - usage chunks', () => {
+  it('extracts usage embedded in a choice chunk', () => {
+    const buf =
+      'data: {"choices":[{"delta":{"content":"Hi"}}]}\n' +
+      'data: {"choices":[{"delta":{"content":"!"}}],"usage":{"prompt_tokens":10,"completion_tokens":5,"total_tokens":15}}\n';
+    const events = parseSseLines(buf);
+    const usageEvent = events.find((e) => e.usage);
+    expect(usageEvent).toBeDefined();
+    expect(usageEvent!.usage).toEqual({
+      prompt_tokens: 10,
+      completion_tokens: 5,
+      total_tokens: 15,
+    });
+  });
+
+  it('parses a usage-only final chunk (OpenAI style)', () => {
+    const events = parseSseLines('data: {"usage":{"prompt_tokens":7,"completion_tokens":3}}\n');
+    const usageEvent = events.find((e) => e.kind === 'usage');
+    expect(usageEvent).toBeDefined();
+    expect(usageEvent!.usage?.completion_tokens).toBe(3);
+  });
+
+  it('parses an Ollama usage-only chunk with eval metadata', () => {
+    const events = parseSseLines(
+      '{"usage":{"prompt_eval_count":20,"eval_count":8,"eval_duration":2000000000}}\n',
+    );
+    const usageEvent = events.find((e) => e.kind === 'usage');
+    expect(usageEvent).toBeDefined();
+    expect(usageEvent!.ollama?.eval_count).toBe(8);
+    expect(usageEvent!.usage?.completion_tokens).toBeUndefined();
+  });
+
+  it('keeps the last usage seen across multiple usage chunks', () => {
+    const buf =
+      'data: {"usage":{"prompt_tokens":1,"completion_tokens":1}}\n' +
+      'data: {"choices":[{"delta":{"content":"x"}}]}\n' +
+      'data: {"usage":{"prompt_tokens":50,"completion_tokens":25,"total_tokens":75}}\n';
+    const events = parseSseLines(buf);
+    const usages = events.filter((e) => e.usage);
+    expect(usages).toHaveLength(2);
+    const last = usages[usages.length - 1];
+    expect(last!.usage?.completion_tokens).toBe(25);
+  });
+
+  it('ignores a chunk whose usage has no numeric fields', () => {
+    const events = parseSseLines('data: {"usage":{}}\n');
+    expect(events.some((e) => e.usage)).toBe(false);
+  });
+});
