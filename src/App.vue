@@ -12,6 +12,7 @@ import type { Message } from '@/lib/types'
 const config = reactive<Config>({ ...defaultConfig })
 const userPrompt = ref('')
 const toast = ref<{ message: string; kind: 'ok' | 'err' } | null>(null)
+const savedRunsRef = ref<{ refresh: () => void } | null>(null)
 
 const { status, text, tokens, result, error, run, abort } = useBenchmark()
 
@@ -21,6 +22,7 @@ async function onStart() {
   const userContent = userPrompt.value.trim() || config.systemPrompt.trim() || 'Hello'
   const messages: Message[] = [{ role: 'user', content: userContent }]
   await run(config, messages, config.systemPrompt)
+  savedRunsRef.value?.refresh()
 
   if (result.value && status.value !== 'error') {
     // Debounce save so a fast stream does not write 100 times.
@@ -65,7 +67,7 @@ function showToast(message: string, kind: 'ok' | 'err') {
     </main>
 
     <aside class="right">
-      <SavedRuns />
+      <SavedRuns ref="savedRunsRef" />
     </aside>
 
     <div v-if="toast" class="toast" :class="{ ok: toast.kind === 'ok' }">{{ toast.message }}</div>

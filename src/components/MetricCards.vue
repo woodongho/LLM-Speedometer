@@ -7,6 +7,13 @@ const props = defineProps<{ result: BenchmarkResult | null }>()
 
 const ready = computed(() => !!props.result)
 
+const sourceLabel = computed(() => {
+  if (!props.result) return ''
+  return props.result.tokenCountSource === 'usage'
+    ? ''
+    : ' · estimated (endpoint sent no usage)'
+})
+
 const cards = computed(() => {
   if (!props.result) return []
   const r = props.result
@@ -31,7 +38,7 @@ const cards = computed(() => {
     },
     {
       label: 'Tokens',
-      sub: `prompt / completion / total`,
+      sub: `prompt / completion / total${sourceLabel.value}`,
       value: `${r.promptTokens} / ${r.completionTokens} / ${r.totalTokens}`,
       color: 'neutral',
     },

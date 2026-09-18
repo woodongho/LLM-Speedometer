@@ -14,6 +14,12 @@ function remove(id: string) {
   load()
 }
 
+function refresh() {
+  load()
+}
+
+defineExpose({ refresh })
+
 onMounted(load)
 </script>
 
