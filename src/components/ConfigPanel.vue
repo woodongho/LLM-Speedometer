@@ -3,11 +3,17 @@ import { defaultConfig, type Config } from '@/composables/useBenchmark'
 
 const props = defineProps<{
   config: Config
+  prompt: string
   running: boolean
 }>()
 
+function updatePrompt(e: Event) {
+  emit('update:prompt', (e.target as HTMLInputElement).value)
+}
+
 const emit = defineEmits<{
   (e: 'update:config', config: Config): void
+  (e: 'update:prompt', value: string): void
   (e: 'start'): void
   (e: 'abort'): void
 }>()
@@ -28,6 +34,19 @@ function update(key: keyof Config, value: string | number) {
 <template>
   <section class="card">
     <h2 class="section-title">Engine</h2>
+
+    <div class="field">
+      <label for="prompt">Prompt (user question)</label>
+      <input
+        id="prompt"
+        type="text"
+        placeholder="예: 2050년 한국 연금 재고 상황 분석해줘"
+        :value="prompt"
+        :disabled="running"
+        @input="updatePrompt($event)"
+      />
+      <p class="small muted">이 문장이 실제 생성될 질문입니다. 비워두면 System prompt를 사용합니다.</p>
+    </div>
 
     <div class="field">
       <label for="endpoint">Endpoint URL <span class="hint">(OpenAI-compatible)</span></label>

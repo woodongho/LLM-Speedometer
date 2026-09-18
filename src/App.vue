@@ -10,7 +10,7 @@ import { saveRun } from '@/lib/storage'
 import type { Message } from '@/lib/types'
 
 const config = reactive<Config>({ ...defaultConfig })
-const prompt = ref('Tell me a short, creative sentence about the ocean.')
+const userPrompt = ref('')
 const toast = ref<{ message: string; kind: 'ok' | 'err' } | null>(null)
 
 const { status, text, tokens, result, error, run, abort } = useBenchmark()
@@ -18,7 +18,8 @@ const { status, text, tokens, result, error, run, abort } = useBenchmark()
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
 async function onStart() {
-  const messages: Message[] = [{ role: 'user', content: prompt.value.trim() || 'Hello' }]
+  const userContent = userPrompt.value.trim() || config.systemPrompt.trim() || 'Hello'
+  const messages: Message[] = [{ role: 'user', content: userContent }]
   await run(config, messages, config.systemPrompt)
 
   if (result.value && status.value !== 'error') {
@@ -54,7 +55,7 @@ function showToast(message: string, kind: 'ok' | 'err') {
     </header>
 
     <aside class="left">
-      <ConfigPanel :config="config" :running="status === 'running'" @update:config="Object.assign(config, $event)" @start="onStart" @abort="abort" />
+      <ConfigPanel :config="config" :prompt="userPrompt" :running="status === 'running'" @update:config="Object.assign(config, $event)" @update:prompt="userPrompt = $event" @start="onStart" @abort="abort" />
     </aside>
 
     <main class="center">
