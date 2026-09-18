@@ -1,0 +1,31 @@
+{
+  "name": "llm-speedometer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Benchmark and visualize the speed of local LLMs via an OpenAI-compatible streaming API.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "vue-tsc --noEmit",
+    "tauri": "tauri",
+    "build:frontend": "vite build"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.3",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0",
+    "@types/node": "^22.10.5",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/tsconfig": "^0.5.1",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.7",
+    "vue-tsc": "^2.1.10",
+    "vitest": "^2.1.8"
+  }
+}
