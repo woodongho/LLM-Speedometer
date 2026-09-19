@@ -61,6 +61,19 @@ describe('normalizeChunk', () => {
     expect(ev.usage).toEqual({ prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 });
   });
 
+  it('parses delta.text or message.content', () => {
+    const ev1 = normalizeChunk({ choices: [{ delta: { text: 'alt1' } }] });
+    expect(ev1.content).toBe('alt1');
+    const ev2 = normalizeChunk({ choices: [{ message: { content: 'alt2' } }] });
+    expect(ev2.content).toBe('alt2');
+  });
+
+  it('parses Ollama native chunk without choices', () => {
+    const ev = normalizeChunk({ message: { content: 'ollama text' }, done: false });
+    expect(ev.kind).toBe('token');
+    expect(ev.content).toBe('ollama text');
+  });
+
   it('parses an Ollama usage-only chunk', () => {
     const ev = normalizeChunk({ usage: { prompt_eval_count: 9, eval_count: 3 } });
     expect(ev.kind).toBe('usage');

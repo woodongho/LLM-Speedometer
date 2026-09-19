@@ -5,12 +5,12 @@ import MetricCards from '@/components/MetricCards.vue'
 import SpeedChart from '@/components/SpeedChart.vue'
 import ChatOutput from '@/components/ChatOutput.vue'
 import SavedRuns from '@/components/SavedRuns.vue'
-import { useBenchmark, defaultConfig, type Config } from '@/composables/useBenchmark'
+import { useBenchmark, defaultConfig, DEFAULT_PROMPT, type Config } from '@/composables/useBenchmark'
 import { saveRun } from '@/lib/storage'
 import type { Message } from '@/lib/types'
 
 const config = reactive<Config>({ ...defaultConfig })
-const userPrompt = ref('')
+const userPrompt = ref(DEFAULT_PROMPT)
 const toast = ref<{ message: string; kind: 'ok' | 'err' } | null>(null)
 const savedRunsRef = ref<{ refresh: () => void } | null>(null)
 
@@ -42,7 +42,7 @@ async function onStart() {
 
 function showToast(message: string, kind: 'ok' | 'err') {
   toast.value = { message, kind }
-  setTimeout(() => (toast.value = null), 3500)
+  setTimeout(() => (toast.value = null), kind === 'err' ? 8000 : 3500)
 }
 </script>
 
@@ -62,7 +62,7 @@ function showToast(message: string, kind: 'ok' | 'err') {
 
     <main class="center">
       <MetricCards :result="result" />
-      <ChatOutput :text="text" :running="status === 'running'" />
+      <ChatOutput :text="text" :running="status === 'running'" :error="error" />
       <SpeedChart :tokens="tokens" />
     </main>
 
@@ -70,6 +70,6 @@ function showToast(message: string, kind: 'ok' | 'err') {
       <SavedRuns ref="savedRunsRef" />
     </aside>
 
-    <div v-if="toast" class="toast" :class="{ ok: toast.kind === 'ok' }">{{ toast.message }}</div>
+    <div v-if="toast" class="toast" :class="{ ok: toast.kind === 'ok' }" @click="toast = null" title="클릭하면 닫힙니다">{{ toast.message }}</div>
   </div>
 </template>

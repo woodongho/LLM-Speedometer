@@ -10,7 +10,7 @@
 export function normalizeEndpoint(endpoint: string): string {
   let e = endpoint.trim().replace(/\/+$/, '')
   if (!e) return e
-  if (/\/chat\/completions$/.test(e)) return e
+  if (/\/(chat\/completions|completions|api\/chat|api\/generate|messages)$/.test(e)) return e
   if (/\/v1$/.test(e)) return `${e}/chat/completions`
   return `${e}/v1/chat/completions`
 }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { defaultConfig, type Config } from '@/composables/useBenchmark'
 
 const props = defineProps<{
@@ -7,8 +8,13 @@ const props = defineProps<{
   running: boolean
 }>()
 
+const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
+const isMixedContent = computed(() => {
+  return isHttps && props.config.endpoint.trim().toLowerCase().startsWith('http:')
+})
+
 function updatePrompt(e: Event) {
-  emit('update:prompt', (e.target as HTMLInputElement).value)
+  emit('update:prompt', (e.target as HTMLTextAreaElement).value)
 }
 
 const emit = defineEmits<{
@@ -37,15 +43,16 @@ function update(key: keyof Config, value: string | number) {
 
     <div class="field">
       <label for="prompt">Prompt (user question)</label>
-      <input
+      <textarea
         id="prompt"
-        type="text"
-        placeholder="예: 2050년 한국 연금 재고 상황 분석해줘"
+        rows="4"
+        class="prompt-textarea"
+        placeholder="Enter benchmark prompt (e.g. Explain quantum computing in detail...)"
         :value="prompt"
         :disabled="running"
         @input="updatePrompt($event)"
       />
-      <p class="small muted">이 문장이 실제 생성될 질문입니다. 비워두면 System prompt를 사용합니다.</p>
+      <p class="small muted">실제 LLM에 전송될 질문입니다. 긴 질문일수록 TTFT 및 TPS(초당 토큰 속도)를 명확하게 측정할 수 있습니다.</p>
     </div>
 
     <div class="field">
@@ -59,6 +66,22 @@ function update(key: keyof Config, value: string | number) {
         @input="text('endpoint')($event)"
       />
       <p class="small muted">Ollama · vLLM · llama.cpp · LM Studio · SGLang</p>
+    </div>
+
+    <div v-if="isMixedContent" class="mixed-content-banner">
+      <div class="banner-title">⚠️ HTTPS(Vercel) 혼합 콘텐츠(Mixed Content) 안내</div>
+      <p class="banner-desc">
+        현재 웹사이트가 <strong>HTTPS(Vercel)</strong>로 구동 중이어서 브라우저 보안 정책상 비보안 로컬 주소(<code>http://localhost</code>) 호출이 차단되어 응답이 오지 않습니다.
+      </p>
+      <details class="banner-details">
+        <summary>해결 방법 4가지</summary>
+        <ol>
+          <li><strong>로컬 개발 서버 실행 (가장 추천):</strong> 터미널에서 <code>npm run dev</code> 실행 후 <code>http://localhost:5173</code>(HTTP)으로 접속</li>
+          <li><strong>Tauri 데스크톱 앱 실행:</strong> <code>npm run tauri dev</code>로 네이티브 앱 실행 (브라우저 제약 없음)</li>
+          <li><strong>터널로 로컬에 HTTPS 주소 부여:</strong> <code>npx cloudflared tunnel --url http://localhost:11434</code> 실행 후 발급된 <code>https://...trycloudflare.com</code>을 Endpoint에 입력</li>
+          <li><strong>Chrome 사이트 설정 허용:</strong> 주소창 좌측 사이트 설정 → '안전하지 않은 콘텐츠(Insecure content)'를 '허용'으로 변경 (로컬 Ollama 실행 시 <code>OLLAMA_ORIGINS="*"</code> 환경변수 필요)</li>
+        </ol>
+      </details>
     </div>
 
     <div class="field">

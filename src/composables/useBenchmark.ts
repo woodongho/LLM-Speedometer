@@ -13,12 +13,15 @@ export interface Config {
   systemPrompt: string
 }
 
+export const DEFAULT_PROMPT =
+  'Explain the architectural evolution of large language models from the original Transformer to modern decoder-only architectures. Discuss key innovations such as multi-head self-attention, rotary position embeddings (RoPE), SwiGLU activation functions, and post-training alignment techniques (RLHF/DPO) in detail.'
+
 export const defaultConfig: Config = {
   endpoint: 'http://localhost:11434/v1/chat/completions',
   apiKey: '',
   model: 'llama3.1',
   temperature: 0.7,
-  maxTokens: 256,
+  maxTokens: 1024,
   systemPrompt: '',
 }
 
@@ -93,7 +96,19 @@ export function useBenchmark() {
       } else if (err instanceof NetworkError) {
         error.value = err.message
       } else {
-        error.value = err instanceof Error ? err.message : String(err)
+        const rawMsg = err instanceof Error ? err.message : String(err)
+        if (
+          (rawMsg.includes('Failed to fetch') || rawMsg.includes('NetworkError') || rawMsg.includes('Load failed')) &&
+          typeof window !== 'undefined' &&
+          window.location.protocol === 'https:' &&
+          fullEndpoint.startsWith('http:')
+        ) {
+          error.value = `[Mixed Content 차단] HTTPS(Vercel) 사이트에서는 브라우저 보안 정책으로 인해 HTTP 로컬 주소(${fullEndpoint})로의 요청이 차단됩니다. 터널(Cloudflare/ngrok)을 사용하거나 로컬/데스크톱 앱으로 구동해주세요.`
+        } else if (rawMsg.includes('Failed to fetch')) {
+          error.value = `연결 실패 (Failed to fetch): 엔드포인트 URL이 올바른지, 서버가 실행 중인지, CORS(OLLAMA_ORIGINS)가 허용되었는지 확인하세요.`
+        } else {
+          error.value = rawMsg
+        }
       }
       status.value = 'error'
     } finally {

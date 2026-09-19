@@ -41,4 +41,9 @@ describe('normalizeEndpoint', () => {
     expect(normalizeEndpoint(full).endsWith('/chat/completions')).toBe(true);
     expect(normalizeEndpoint(full).split('/chat/completions').length).toBe(2);
   });
+
+  it('preserves specialized paths like api/chat or completions', () => {
+    expect(normalizeEndpoint('https://api.example.com/api/chat')).toBe('https://api.example.com/api/chat');
+    expect(normalizeEndpoint('https://api.example.com/v1/completions')).toBe('https://api.example.com/v1/completions');
+  });
 });

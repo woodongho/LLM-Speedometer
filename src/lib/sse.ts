@@ -47,10 +47,19 @@ export function extractOllama(obj: any): OllamaMeta | undefined {
  * Handles both OpenAI chat-completion-chunk objects and Ollama usage-only chunks.
  */
 export function normalizeChunk(obj: any): StreamEvent {
-  if (obj && Array.isArray(obj.choices)) {
+  if (obj && Array.isArray(obj.choices) && obj.choices.length > 0) {
     const choice = obj.choices[0] || {};
     const delta = choice.delta || {};
-    const content = typeof delta.content === 'string' ? delta.content : '';
+    const content =
+      typeof delta.content === 'string'
+        ? delta.content
+        : typeof delta.text === 'string'
+        ? delta.text
+        : typeof choice.text === 'string'
+        ? choice.text
+        : typeof choice.message?.content === 'string'
+        ? choice.message.content
+        : '';
     const event: StreamEvent = {
       kind: 'token',
       content,
@@ -65,7 +74,25 @@ export function normalizeChunk(obj: any): StreamEvent {
     return event;
   }
 
-  // Ollama final chunk carrying only usage metadata.
+  // Ollama native streaming chunk without choices array
+  if (obj && (obj.message?.content !== undefined || obj.response !== undefined)) {
+    const content =
+      typeof obj.message?.content === 'string'
+        ? obj.message.content
+        : typeof obj.response === 'string'
+        ? obj.response
+        : '';
+    const event: StreamEvent = {
+      kind: 'token',
+      content,
+      finishReason: obj.done ? 'stop' : null,
+    };
+    const ollama = extractOllama(obj);
+    if (ollama) event.ollama = ollama;
+    return event;
+  }
+
+  // Ollama or OpenAI final chunk carrying only usage metadata.
   if (obj && obj.usage) {
     const usage = extractUsage(obj.usage);
     const ollama = extractOllama(obj.usage);
@@ -95,6 +122,11 @@ export function parseSseLines(buffer: string): StreamEvent[] {
   for (const rawLine of lines) {
     let line = rawLine.trim();
     if (!line) continue;
+
+    // Ignore SSE comments and event/id headers
+    if (line.startsWith(':') || line.startsWith('event:') || line.startsWith('id:') || line.startsWith('retry:')) {
+      continue;
+    }
 
     if (line.startsWith('data:')) {
       line = line.slice(5).trim();
