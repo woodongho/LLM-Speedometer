@@ -135,20 +135,27 @@ const ticks = computed(() => {
           </text>
         </g>
 
-        <!-- Peak Speed Marker (Tiny Red Dot) -->
-        <g v-if="peakTps > 0" :transform="`rotate(${peakAngle} 120 120)`" class="peak-marker">
-          <polygon points="116,28 124,28 120,36" fill="#f43f5e" filter="url(#glow)" />
-        </g>
+        <!-- Center Origin Pivot Group: Everything inside rotates around (0, 0) -->
+        <g transform="translate(120, 120)">
+          <!-- Peak Speed Marker -->
+          <g v-if="peakTps > 0" :transform="`rotate(${peakAngle})`" class="peak-marker-spin">
+            <polygon points="-4,-92 4,-92 0,-84" fill="#f43f5e" filter="url(#glow)" />
+          </g>
 
-        <!-- Needle (Smoothly Animated) -->
-        <g :transform="`rotate(${needleAngle} 120 120)`" class="gauge-needle" filter="url(#glow)">
-          <polygon points="118,120 122,120 120.8,32 119.2,32" :fill="speedTier.color" />
-          <circle cx="120" cy="32" r="2.5" :fill="speedTier.color" />
-        </g>
+          <!-- Needle: Base is permanently pinned at (0, 0), Tip points to (0, -88) -->
+          <g :transform="`rotate(${needleAngle})`" class="needle-spin" filter="url(#glow)">
+            <!-- Main Needle Tapered Body -->
+            <polygon points="-3.5,0 3.5,0 1.2,-88 -1.2,-88" :fill="speedTier.color" />
+            <!-- Needle Tip Highlight -->
+            <circle cx="0" cy="-88" r="3" :fill="speedTier.color" />
+            <!-- Needle Counterweight Tail -->
+            <polygon points="-2.5,0 2.5,0 1.5,14 -1.5,14" fill="#475569" />
+          </g>
 
-        <!-- Center Pivot Cap -->
-        <circle cx="120" cy="120" r="14" fill="#0d1426" stroke="#26304f" stroke-width="3" />
-        <circle cx="120" cy="120" r="6" :fill="speedTier.color" />
+          <!-- Center Pivot Cap (Permanently at center) -->
+          <circle cx="0" cy="0" r="14" fill="#0b1122" stroke="#26304f" stroke-width="3" />
+          <circle cx="0" cy="0" r="6" :fill="speedTier.color" />
+        </g>
       </svg>
 
       <!-- Center Digital Readout Display -->
@@ -269,18 +276,14 @@ const ticks = computed(() => {
   overflow: visible;
 }
 
-.gauge-progress {
-  transition: stroke-dashoffset 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+.needle-spin {
+  transition: transform 0.22s cubic-bezier(0.2, 1, 0.3, 1);
+  transform-origin: 0px 0px;
 }
 
-.gauge-needle {
-  transition: transform 0.18s cubic-bezier(0.34, 1.3, 0.64, 1);
-  transform-origin: 120px 120px;
-}
-
-.peak-marker {
+.peak-marker-spin {
   transition: transform 0.3s ease;
-  transform-origin: 120px 120px;
+  transform-origin: 0px 0px;
 }
 
 .tick-text {

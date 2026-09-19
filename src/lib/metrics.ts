@@ -111,7 +111,13 @@ export function computeMetrics(params: {
       const intervals = tokens.length - 1;
       tpotMs = generationDurationMs / intervals;
       if (generationDurationMs > 0) {
-        tps = (completionTokens / generationDurationMs) * 1000;
+        // Ensure TPS consistently aligns with TPOT (1000 / tpotMs) and the live speed chart.
+        // If server-reported completionTokens deviates significantly (> 15%) from streamed tokens
+        // (e.g. server includes hidden reasoning/thinking tokens not streamed), use actual stream tokens.
+        const streamTokens = tokens.length;
+        const ratio = streamTokens > 0 ? completionTokens / streamTokens : 1;
+        const tokensForTps = (ratio >= 0.85 && ratio <= 1.15) ? completionTokens : streamTokens;
+        tps = (tokensForTps / generationDurationMs) * 1000;
       } else {
         errors.push('All tokens arrived within the same millisecond; TPS is undefined.');
       }
