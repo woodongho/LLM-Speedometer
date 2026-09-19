@@ -18,10 +18,12 @@ function clampNonNegative(value: number | undefined, fallback = 0): number {
   return typeof value === 'number' && value >= 0 ? value : fallback;
 }
 
+const BPE_TOKEN_REGEX = /'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+/gu;
+
 export function estimateTokensFromText(text: string): number {
   if (!text || !text.trim()) return 0;
-  const words = text.trim().match(/(\s*\S+|\s+)/g);
-  return words ? words.length : Math.ceil(text.length / 4);
+  const matches = text.trim().match(BPE_TOKEN_REGEX);
+  return matches ? matches.length : Math.ceil(text.length / 4);
 }
 
 /**

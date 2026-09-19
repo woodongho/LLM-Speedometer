@@ -148,16 +148,13 @@ export async function streamEvents(
   return { events, tokens, text };
 }
 
+// Standard LLM BPE pre-tokenization regex (GPT-2/4, Llama, Qwen compatible)
+// Splits words with leading spaces, contractions, numbers, and punctuation symbols
+const BPE_TOKEN_REGEX = /'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+/gu;
+
 export function splitContent(content: string): string[] {
   if (!content) return [];
-  // Each streaming delta from an LLM server normally represents a single token (or subword).
-  // We do NOT split into individual characters, which previously caused token counts to be 4-5x inflated.
-  if (content.length <= 16) {
-    return [content];
-  }
-  // For large chunks delivered in a single burst (e.g. non-streaming or proxy buffering),
-  // split by whitespace/word boundaries to approximate tokens instead of characters.
-  const matches = content.match(/(\s*\S+|\s+)/g);
+  const matches = content.match(BPE_TOKEN_REGEX);
   return matches && matches.length > 0 ? matches : [content];
 }
 
