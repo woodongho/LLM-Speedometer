@@ -50,9 +50,22 @@ function showToast(message: string, kind: 'ok' | 'err') {
   <div class="app">
     <header class="header">
       <span class="logo">🏎️</span>
-      <div>
-        <h1>LLM Speedometer</h1>
-        <div class="sub">Benchmark local LLM speed via an OpenAI-compatible streaming API</div>
+      <div class="header-content">
+        <div class="header-top">
+          <h1>LLM Speedometer</h1>
+          <span class="badge" style="border-color: #38bdf8; color: #38bdf8;">v0.1.0</span>
+          <a
+            href="https://github.com/woodongho/LLM-Speedometer"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="header-github-link"
+          >
+            ⭐ GitHub
+          </a>
+        </div>
+        <div class="sub">
+          로컬(Ollama, vLLM, LM Studio) 및 클라우드 LLM의 <strong>첫 토큰 지연 시간(TTFT)</strong>과 <strong>초당 토큰 생성 속도(TPS)</strong>를 실시간 스트리밍으로 정밀 측정하고 시각화하는 오픈소스 벤치마크 도구입니다.
+        </div>
       </div>
     </header>
 
@@ -69,6 +82,18 @@ function showToast(message: string, kind: 'ok' | 'err') {
     <aside class="right">
       <SavedRuns ref="savedRunsRef" />
     </aside>
+
+    <footer class="footer">
+      <div class="footer-left">
+        <div><strong>LLM Speedometer</strong> · Made with ❤️ by <strong>woodongho</strong></div>
+        <div class="footer-desc">OpenAI-compatible streaming speed benchmark for Ollama, vLLM, LM Studio, llama.cpp & Cloud LLMs</div>
+      </div>
+      <div class="footer-right">
+        <a href="https://github.com/woodongho/LLM-Speedometer" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
+        <a href="https://github.com/woodongho" target="_blank" rel="noopener noreferrer">@woodongho</a>
+        <a href="mailto:uhotax@gmail.com">Contact</a>
+      </div>
+    </footer>
 
     <div v-if="toast" class="toast" :class="{ ok: toast.kind === 'ok' }" @click="toast = null" title="클릭하면 닫힙니다">{{ toast.message }}</div>
   </div>
