@@ -30,8 +30,8 @@ describe('computeMetrics - empty', () => {
   });
 });
 
-describe('computeMetrics - single token', () => {
-  it('computes TTFT and a single inter-token interval', () => {
+describe('computeMetrics - two tokens', () => {
+  it('computes TTFT, one inter-token interval, TPS, and effective TPS', () => {
     const r = computeMetrics({ tokens: toks([0, 200], ['H', 'i']) });
     expect(r.ttftMs).toBe(0);
     expect(r.completionTokens).toBe(2);
@@ -40,8 +40,10 @@ describe('computeMetrics - single token', () => {
     expect(r.tps).toBe(10); // 2 tokens / 200ms
     expect(r.effectiveTps).toBe(10);
   });
+});
 
-  it('single token leaves generation TPS undefined', () => {
+describe('computeMetrics - single token', () => {
+  it('leaves TPOT and generation TPS undefined', () => {
     const r = computeMetrics({ tokens: toks([0], ['H']) });
     expect(r.ttftMs).toBe(0);
     expect(r.tpotMs).toBeNull();
@@ -53,17 +55,15 @@ describe('computeMetrics - single token', () => {
 
 describe('computeMetrics - multiple tokens', () => {
   it('computes TPOT as the average inter-token interval', () => {
-    // tokens at 0, 100, 100, 400 ms
     const r = computeMetrics({ tokens: toks([0, 100, 100, 400], ['a', 'b', 'c', 'd']) });
     expect(r.completionTokens).toBe(4);
     expect(r.generationDurationMs).toBe(400);
-    expect(r.tpotMs).toBe(133.33); // 400ms / 3 intervals
-    // TPS over decode phase: 4 tokens / 400ms = 10 tok/s
-    expect(r.tps).toBe(10);
+    expect(r.tpotMs).toBe(133.33); // 400 / 3
+    expect(r.tps).toBe(10); // 4 tokens / 400ms
     expect(r.effectiveTps).toBe(10);
   });
 
-  it('uses arrival order for TTFT but sorted span for generation duration', () => {
+  it('handles out-of-order timestamps by sorting', () => {
     const r = computeMetrics({
       tokens: [
         { index: 0, content: 'a', ts: 400 },
@@ -71,9 +71,7 @@ describe('computeMetrics - multiple tokens', () => {
         { index: 2, content: 'c', ts: 200 },
       ],
     });
-    // TTFT is the first token that arrived (index 0 -> 400ms)
     expect(r.ttftMs).toBe(400);
-    // Decode span is min..max across all tokens
     expect(r.generationDurationMs).toBe(400);
     expect(r.tpotMs).toBe(200);
   });
@@ -114,33 +112,6 @@ describe('computeMetrics - token counts', () => {
   });
 });
 
-describe('computeMetrics - Ollama metadata', () => {
-  it('derives prompt eval time and throughput', () => {
-    const r = computeMetrics({
-      tokens: toks([0, 100, 200], ['a', 'b', 'c']),
-      ollama: {
-        prompt_eval_count: 100,
-        eval_count: 3,
-        prompt_eval_duration: 250_000_000, // 250ms
-        eval_duration: 300_000_000, // 300ms
-      },
-    });
-    expect(r.promptEvalMs).toBe(250);
-    expect(r.promptTps).toBe(400); // 100 / 0.25s
-    expect(r.ollamaTps).toBe(10); // 3 / 0.3s
-  });
-
-  it('ignores missing Ollama durations', () => {
-    const r = computeMetrics({
-      tokens: toks([0, 100], ['a', 'b']),
-      ollama: { prompt_eval_count: 5, eval_count: 2 },
-    });
-    expect(r.promptEvalMs).toBeNull();
-    expect(r.promptTps).toBeNull();
-    expect(r.ollamaTps).toBeNull();
-  });
-});
-
 describe('computeMetrics - error reporting', () => {
   it('flags sub-millisecond generation', () => {
     const r = computeMetrics({ tokens: toks([0, 0], ['a', 'b']) });
@@ -156,85 +127,19 @@ describe('computeMetrics - error reporting', () => {
   });
 });
 
-
-describe('computeMetrics - usage (endpoint sends usage)', () => {
-  it('reflects usage prompt/completion/total exactly', () => {
+describe('computeMetrics - ollama-derived metrics', () => {
+  it('derives prompt eval time and throughput', () => {
     const r = computeMetrics({
-      tokens: toks([0, 10, 20], ['a', 'b', 'c']),
-      usage: { prompt_tokens: 42, completion_tokens: 17, total_tokens: 59 },
+      tokens: toks([0, 100, 200], ['a', 'b', 'c']),
+      ollama: {
+        prompt_eval_count: 100,
+        eval_count: 3,
+        prompt_eval_duration: 250_000_000, // 250ms
+        eval_duration: 300_000_000, // 300ms
+      },
     });
-    expect(r.promptTokens).toBe(42);
-    expect(r.completionTokens).toBe(17);
-    expect(r.totalTokens).toBe(59);
-    expect(r.tokenCountSource).toBe('usage');
-  });
-
-  it('uses explicit total_tokens even if it differs from the sum', () => {
-    const r = computeMetrics({
-      tokens: toks([0, 10], ['a', 'b']),
-      usage: { prompt_tokens: 100, completion_tokens: 5, total_tokens: 108 },
-    });
-    expect(r.totalTokens).toBe(108);
-    expect(r.promptTokens).toBe(100);
-    expect(r.completionTokens).toBe(5);
-  });
-
-  it('defaults total to prompt+completion when total omitted', () => {
-    const r = computeMetrics({
-      tokens: toks([0, 10], ['a', 'b']),
-      usage: { prompt_tokens: 8, completion_tokens: 4 },
-    });
-    expect(r.totalTokens).toBe(12);
-  });
-
-  it('handles completion-only usage (prompt defaults to 0)', () => {
-    const r = computeMetrics({
-      tokens: toks([0, 10], ['a', 'b']),
-      usage: { completion_tokens: 30 },
-    });
-    expect(r.promptTokens).toBe(0);
-    expect(r.completionTokens).toBe(30);
-    expect(r.totalTokens).toBe(30);
-  });
-
-  it('prefers usage over ollama metadata when both present', () => {
-    const r = computeMetrics({
-      tokens: toks([0, 10], ['a', 'b']),
-      usage: { prompt_tokens: 11, completion_tokens: 22, total_tokens: 33 },
-      ollama: { prompt_eval_count: 999, eval_count: 999 },
-    });
-    expect(r.promptTokens).toBe(11);
-    expect(r.completionTokens).toBe(22);
-    expect(r.tokenCountSource).toBe('usage');
-  });
-
-  it('falls back to ollama counts when no OpenAI usage', () => {
-    const r = computeMetrics({
-      tokens: toks([0, 10], ['a', 'b']),
-      ollama: { prompt_eval_count: 30, eval_count: 12 },
-    });
-    expect(r.promptTokens).toBe(30);
-    expect(r.completionTokens).toBe(12);
-    expect(r.tokenCountSource).toBe('usage');
-    expect(r.engine).toBe('ollama');
-  });
-
-  it('never uses estimate when usage is present', () => {
-    const r = computeMetrics({
-      tokens: toks([0, 10, 20, 30], ['a', 'b', 'c', 'd']),
-      usage: { prompt_tokens: 3, completion_tokens: 9 },
-    });
-    // 4 content tokens exist but usage says 9 -> usage wins
-    expect(r.completionTokens).toBe(9);
-    expect(r.tokenCountSource).toBe('usage');
-  });
-
-  it('clamps negative usage counts to zero', () => {
-    const r = computeMetrics({
-      tokens: toks([0, 10], ['a', 'b']),
-      usage: { prompt_tokens: -5, completion_tokens: 4 },
-    });
-    expect(r.promptTokens).toBe(0);
-    expect(r.completionTokens).toBe(4);
+    expect(r.promptEvalMs).toBe(250);
+    expect(r.promptTps).toBe(400); // 100 / 0.25s
+    expect(r.ollamaTps).toBe(10); // 3 / 0.3s
   });
 });

@@ -2,7 +2,7 @@
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { Chart, registerables } from 'chart.js'
 import type { TokenEvent } from '@/lib/types'
-import { round } from '@/lib/metrics'
+import { buildSpeedSeries } from '@/lib/speed'
 
 Chart.register(...registerables)
 
@@ -11,19 +11,9 @@ const props = defineProps<{ tokens: TokenEvent[] }>()
 const canvasRef = ref<HTMLCanvasElement | null>(null)
 let chart: Chart | null = null
 
-// Build evenly-spaced speed samples (tokens/sec) from token timestamps.
+// Build a smooth tokens/sec series (trailing sliding-window average).
 function buildSeries(tokens: TokenEvent[]) {
-  if (tokens.length < 2) return { labels: [], data: [] as (number | null)[] }
-  const sorted = [...tokens].sort((a, b) => a.ts - b.ts)
-  const labels: number[] = []
-  const data: (number | null)[] = []
-  for (let i = 1; i < sorted.length; i++) {
-    const dt = sorted[i].ts - sorted[i - 1].ts
-    const tps = dt > 0 ? (1000 * 1) / dt : null
-    labels.push(Math.round(sorted[i].ts))
-    data.push(tps == null ? null : round(tps, 1))
-  }
-  return { labels, data }
+  return buildSpeedSeries(tokens)
 }
 
 const lineOptions: Chart['options'] = {
