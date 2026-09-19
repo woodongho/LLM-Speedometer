@@ -77,10 +77,12 @@ export function useBenchmark() {
         { signal: controller.signal },
       )
 
+      const promptCombined = [prompt, ...messages.map((m) => m.content)].filter(Boolean).join('\n')
       const r = computeMetrics({
         tokens: handle.tokens,
         usage: lastUsage(handle.events),
         ollama: lastOllama(handle.events),
+        promptText: promptCombined,
       })
       result.value = r
       text.value = handle.text

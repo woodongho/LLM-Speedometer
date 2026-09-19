@@ -18,6 +18,12 @@ function clampNonNegative(value: number | undefined, fallback = 0): number {
   return typeof value === 'number' && value >= 0 ? value : fallback;
 }
 
+export function estimateTokensFromText(text: string): number {
+  if (!text || !text.trim()) return 0;
+  const words = text.trim().match(/(\s*\S+|\s+)/g);
+  return words ? words.length : Math.ceil(text.length / 4);
+}
+
 /**
  * Compute all speed metrics from a list of token events.
  *
@@ -29,8 +35,9 @@ export function computeMetrics(params: {
   usage?: UsageInfo;
   ollama?: OllamaMeta;
   engine?: EngineType;
+  promptText?: string;
 }): BenchmarkResult {
-  const { tokens = [], usage, ollama, engine = 'unknown' } = params;
+  const { tokens = [], usage, ollama, engine = 'unknown', promptText } = params;
   const errors: string[] = [];
 
   let resolvedEngine = engine;
@@ -65,8 +72,8 @@ export function computeMetrics(params: {
     // Count tokens that actually carried text; fall back to raw token count.
     const contentTokens = tokens.filter((t) => t.content.length > 0).length;
     completionTokens = contentTokens > 0 ? contentTokens : tokens.length;
-    promptTokens = 0;
-    totalTokens = completionTokens;
+    promptTokens = promptText ? estimateTokensFromText(promptText) : 0;
+    totalTokens = promptTokens + completionTokens;
     if (contentTokens === 0) {
       errors.push('No token content was emitted; token count is an estimate.');
     }

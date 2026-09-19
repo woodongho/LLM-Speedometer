@@ -39,6 +39,7 @@ function buildPayload(config: RunConfig): Record<string, unknown> {
     model: config.model,
     messages,
     stream: config.stream ?? true,
+    stream_options: { include_usage: true },
   };
   if (typeof config.temperature === 'number') payload.temperature = config.temperature;
   if (typeof config.maxTokens === 'number') payload.max_tokens = config.maxTokens;
@@ -147,10 +148,17 @@ export async function streamEvents(
   return { events, tokens, text };
 }
 
-function splitContent(content: string): string[] {
-  // Tokenizers split on grapheme boundaries; splitting on code points is a
-  // reasonable, deterministic approximation for benchmarking purposes.
-  return Array.from(content);
+export function splitContent(content: string): string[] {
+  if (!content) return [];
+  // Each streaming delta from an LLM server normally represents a single token (or subword).
+  // We do NOT split into individual characters, which previously caused token counts to be 4-5x inflated.
+  if (content.length <= 16) {
+    return [content];
+  }
+  // For large chunks delivered in a single burst (e.g. non-streaming or proxy buffering),
+  // split by whitespace/word boundaries to approximate tokens instead of characters.
+  const matches = content.match(/(\s*\S+|\s+)/g);
+  return matches && matches.length > 0 ? matches : [content];
 }
 
 async function safeText(resp: Response): Promise<string> {
