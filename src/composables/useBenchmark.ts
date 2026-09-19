@@ -54,6 +54,7 @@ export function useBenchmark() {
     error.value = null
     aborted.value = false
     currentTps.value = 0
+    peakTps.value = 0
   }
 
   async function run(
