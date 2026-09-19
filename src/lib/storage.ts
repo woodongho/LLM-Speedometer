@@ -34,6 +34,17 @@ function writeAll(runs: StoredRun[]): StoredRun[] {
   return runs;
 }
 
+export function maskEndpoint(url: string): string {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (trimmed.length <= 8) return '***';
+
+  // Keep the first half, mask the remaining half with asterisks
+  const keepLength = Math.ceil(trimmed.length / 2);
+  const maskLength = trimmed.length - keepLength;
+  return trimmed.slice(0, keepLength) + '*'.repeat(maskLength);
+}
+
 export function saveRun(
   result: BenchmarkResult,
   meta: { label: string; endpoint: string; model: string },
@@ -43,7 +54,7 @@ export function saveRun(
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
     label: meta.label,
-    endpoint: meta.endpoint,
+    endpoint: maskEndpoint(meta.endpoint),
     model: meta.model,
   };
   const runs = readAll();

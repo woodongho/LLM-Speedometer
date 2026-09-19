@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { listRuns, deleteRun, clearRuns, summarize } from '@/lib/storage'
+import { listRuns, deleteRun, clearRuns, summarize, maskEndpoint } from '@/lib/storage'
 import type { StoredRun } from '@/lib/types'
 
 const runs = ref<StoredRun[]>([])
@@ -38,7 +38,7 @@ onMounted(load)
           <span class="model">{{ run.label || run.model }}</span>
           <span class="badge" :class="{ ollama: run.engine === 'ollama' }">{{ run.engine }}</span>
         </div>
-        <div class="meta">{{ run.model }} · {{ run.endpoint }} · {{ new Date(run.createdAt).toLocaleString() }}</div>
+        <div class="meta">{{ run.model }} · {{ maskEndpoint(run.endpoint) }} · {{ new Date(run.createdAt).toLocaleString() }}</div>
         <div class="run-grid">
           <span class="k">TTFT</span><span class="v">{{ summarize(run).ttft }}</span>
           <span class="k">TPOT</span><span class="v">{{ summarize(run).tpot }}</span>

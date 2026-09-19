@@ -75,3 +75,18 @@ describe('summarize', () => {
     expect(s.tokens).toBe('3 / 4 / 7');
   });
 });
+
+describe('maskEndpoint', () => {
+  it('masks the second half of the url with asterisks', () => {
+    const url = 'https://luck-build-impacts-fairy.trycloudflare.com';
+    const masked = mod.maskEndpoint(url);
+    expect(masked.startsWith('https://luck-build-impac')).toBe(true);
+    expect(masked.endsWith('***')).toBe(true);
+    expect(masked.length).toBe(url.length);
+  });
+
+  it('handles short or empty endpoints', () => {
+    expect(mod.maskEndpoint('')).toBe('');
+    expect(mod.maskEndpoint('http')).toBe('***');
+  });
+});
