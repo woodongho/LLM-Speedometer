@@ -41,6 +41,8 @@ export function useBenchmark() {
   const result = ref<BenchmarkResult | null>(null)
   const error = ref<string | null>(null)
   const aborted = ref(false)
+  const currentTps = ref(0)
+  const peakTps = ref(0)
 
   let controller: AbortController | null = null
 
@@ -51,14 +53,23 @@ export function useBenchmark() {
     result.value = null
     error.value = null
     aborted.value = false
+    currentTps.value = 0
   }
 
-  async function run(config: Config, messages: Message[], prompt: string) {
+  async function run(
+    config: Config,
+    messages: Message[],
+    prompt: string,
+    options?: { onToken?: (chunk: string, liveTps: number) => void },
+  ) {
     reset()
     status.value = 'running'
 
     const fullEndpoint = normalizeEndpoint(config.endpoint)
     controller = new AbortController()
+
+    const startTime = performance.now()
+    const liveTimestamps: number[] = []
 
     try {
       const handle = await streamEvents(
@@ -72,6 +83,24 @@ export function useBenchmark() {
           systemPrompt: prompt,
           onToken: (chunk) => {
             text.value += chunk
+            const nowMs = performance.now()
+            liveTimestamps.push(nowMs)
+
+            // Sliding window (last 1000ms) for real-time tachometer needle
+            const threshold = nowMs - 1000
+            while (liveTimestamps.length > 0 && liveTimestamps[0] < threshold) {
+              liveTimestamps.shift()
+            }
+            const elapsedSinceStart = nowMs - startTime
+            const span = Math.min(elapsedSinceStart, 1000)
+            if (span > 80) {
+              const liveRate = Math.round((liveTimestamps.length * 1000) / span)
+              currentTps.value = liveRate
+              if (liveRate > peakTps.value) {
+                peakTps.value = liveRate
+              }
+            }
+            options?.onToken?.(chunk, currentTps.value)
           },
         },
         { signal: controller.signal },
@@ -87,6 +116,12 @@ export function useBenchmark() {
       result.value = r
       text.value = handle.text
       tokens.value = handle.tokens
+      if (r.tps != null && r.tps > 0) {
+        currentTps.value = r.tps
+        if (r.tps > peakTps.value) {
+          peakTps.value = r.tps
+        }
+      }
       status.value = r.errors.length ? 'error' : 'done'
       if (r.errors.length) error.value = r.errors.join(' ')
     } catch (err) {
@@ -122,7 +157,7 @@ export function useBenchmark() {
     controller?.abort()
   }
 
-  return { status, text, tokens, result, error, aborted, run, abort, reset }
+  return { status, text, tokens, result, error, aborted, currentTps, peakTps, run, abort, reset }
 }
 
 

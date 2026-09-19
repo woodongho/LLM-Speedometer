@@ -5,23 +5,32 @@ import MetricCards from '@/components/MetricCards.vue'
 import SpeedChart from '@/components/SpeedChart.vue'
 import ChatOutput from '@/components/ChatOutput.vue'
 import SavedRuns from '@/components/SavedRuns.vue'
+import RadialGauge from '@/components/RadialGauge.vue'
 import { useBenchmark, defaultConfig, DEFAULT_PROMPT, type Config } from '@/composables/useBenchmark'
 import { saveRun } from '@/lib/storage'
+import { playTokenTick } from '@/lib/audio'
 import type { Message } from '@/lib/types'
 
 const config = reactive<Config>({ ...defaultConfig })
 const userPrompt = ref(DEFAULT_PROMPT)
 const toast = ref<{ message: string; kind: 'ok' | 'err' } | null>(null)
 const savedRunsRef = ref<{ refresh: () => void } | null>(null)
+const soundEnabled = ref(false)
 
-const { status, text, tokens, result, error, run, abort } = useBenchmark()
+const { status, text, tokens, result, error, currentTps, peakTps, run, abort } = useBenchmark()
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null
 
 async function onStart() {
   const userContent = userPrompt.value.trim() || config.systemPrompt.trim() || 'Hello'
   const messages: Message[] = [{ role: 'user', content: userContent }]
-  await run(config, messages, config.systemPrompt)
+  await run(config, messages, config.systemPrompt, {
+    onToken: (_chunk, liveTps) => {
+      if (soundEnabled.value) {
+        playTokenTick(liveTps)
+      }
+    },
+  })
   savedRunsRef.value?.refresh()
 
   if (result.value && status.value !== 'error') {
@@ -74,6 +83,13 @@ function showToast(message: string, kind: 'ok' | 'err') {
     </aside>
 
     <main class="center">
+      <RadialGauge
+        :current-tps="currentTps"
+        :peak-tps="peakTps"
+        :running="status === 'running'"
+        :sound-enabled="soundEnabled"
+        @toggle-sound="soundEnabled = !soundEnabled"
+      />
       <MetricCards :result="result" />
       <ChatOutput :text="text" :running="status === 'running'" :error="error" />
       <SpeedChart :tokens="tokens" />

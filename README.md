@@ -25,21 +25,31 @@
 
 ## ✨ 주요 기능
 
-### 1. ⏱️ 초정밀 실시간 성능 지표 (Live Metrics)
+### 1. 🏎️ 슈퍼카 아날로그 속도계 (Radial Tachometer Gauge)
+* **실시간 네온 바늘 (Needle)**: 토큰이 스트리밍되는 즉시 순간 생성 속도(TPS)에 반응하여 부드럽게 가속하는 아날로그 계기판.
+* **속도 구간별 동적 모드 (Drive Modes)**:
+  * `0 ~ 40 tok/s`: **CRUISING 🚗** (시안 블루)
+  * `40 ~ 90 tok/s`: **SPORT 🏎️** (에메랄드 그린)
+  * `90 ~ 150 tok/s`: **RACE 🚀** (앰버 골드)
+  * `150+ tok/s`: **NITRO 🔥** (네온 마젠타 오버드라이브 발광)
+* **MAX PEAK TPS 기록**: 세션 중 달성한 최고 순간 속도를 핀 마커와 뱃지로 실시간 추적.
+* **🔊 Web Audio API 음향 피드백**: 토큰 생성 속도(TPS)에 비례하는 경쾌한 피치의 오디오 틱 사운드 지원 (원클릭 음소거 토글 제공).
+
+### 2. ⏱️ 초정밀 실시간 성능 지표 (Live Metrics)
 * **TTFT (Time to First Token)**: 사용자의 요청 전송 시점부터 첫 번째 디코딩 토큰이 화면에 도착할 때까지의 지연 시간(프리필 단계 속도)을 ms 단위로 측정.
 * **TPOT (Time Per Output Token)**: 모델이 1개의 토큰을 디코딩하는 데 걸리는 평균 시간(ms).
 * **TPS (Tokens Per Second)**: 실시간 생성 처리량(Throughput)을 계산하여 모델의 순수 추론 속도 확인.
 * **토큰 수 정밀 집계**: OpenAI `stream_options: { include_usage: true }` 및 Ollama 메타데이터를 파싱하여 `prompt_tokens` / `completion_tokens` / `total_tokens`를 정확하게 집계.
 
-### 2. 📈 실시간 속도 그래프 (Live Speed Graph)
+### 3. 📈 실시간 속도 그래프 (Live Speed Graph)
 * **슬라이딩 윈도우 스무딩**: 네트워크 버퍼링으로 인한 왜곡을 방지하기 위해 1초 트레일링 윈도우 방식으로 정제된 실시간 TPS 변화 추이를 Chart.js로 시각화.
 * **생성 전 과정 추적**: 생성 시작부터 완료까지 토큰 생성 속도의 안정성을 한눈에 파악 가능.
 
-### 3. 💾 실행 기록 저장 및 성능 비교 (Saved Runs)
+### 4. 💾 실행 기록 저장 및 성능 비교 (Saved Runs)
 * **로컬 영구 저장**: 실행 결과를 브라우저 `localStorage`에 자동 저장.
 * **백엔드/양자화 비교**: 동일 프롬프트에 대해 FP16 vs Q4_K_M 양자화 모델, vLLM vs Ollama 백엔드 간의 성능 차이를 카드 형태로 손쉽게 비교·분석.
 
-### 4. 🌐 유연한 멀티 플랫폼 지원
+### 5. 🌐 유연한 멀티 플랫폼 지원
 * **Vercel 웹 배포**: 브라우저 어디서나 바로 접속하여 사용 가능.
 * **Tauri 네이티브 데스크톱 앱**: Rust 기반 초경량 데스크톱 앱으로, 웹 브라우저의 CORS 및 Mixed Content 제약 없이 로컬 `http://localhost:11434`에 즉시 접속 가능.
 * **Mixed Content & CORS 스마트 진단**: HTTPS 환경에서 발생할 수 있는 네트워크/보안 차단을 자동 감지하고 해결 가이드 제공.
